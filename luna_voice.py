@@ -79,7 +79,7 @@ def serve_audio(filename):
     filepath = os.path.join(AUDIO_DIR, filename)
     return send_file(filepath, mimetype="audio/mpeg")
 
-def respond_with_audio(text, next_action="/listen"):
+def respond_with_audio(text, next_action="/respond"):
     """Spiele ElevenLabs Audio und höre danach zu"""
     response = VoiceResponse()
     audio_path = generate_audio(text)
@@ -94,7 +94,7 @@ def respond_with_audio(text, next_action="/listen"):
         gather = make_gather(next_action)
         gather.say(text, language="de-DE", voice="Polly.Vicki")
         response.append(gather)
-    response.redirect("/listen")
+    response.redirect("/respond")
     return str(response), 200
 
 @app.route("/incoming-call", methods=["POST"])
