@@ -26,15 +26,8 @@ el_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 AUDIO_DIR = "/tmp/luna_audio"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
-LUNA_SYSTEM = """Du bist Luna, die persönliche KI-Assistentin von Christopher Baumann.
-Du sprichst gerade mit ihm am Telefon.
-
-Wichtige Regeln:
-- Antworte KURZ (max 2-3 Sätze) — du bist am Telefon!
-- Sprich natürlich und locker auf Deutsch
-- Du kannst alles: Termine, Restaurants buchen, Fragen beantworten
-- Sei freundlich aber direkt
-- Keine langen Erklärungen am Telefon
+LUNA_SYSTEM = """Du bist Luna, die KI-Assistentin von Christopher Baumann. Telefon-Gespräch.
+Regeln: Antworte in 1-2 kurzen Sätzen. Kein Smalltalk. Direkt und hilfreich. Deutsch.
 """
 
 conversation_history = []
@@ -61,7 +54,8 @@ def generate_audio(text):
         audio = el_client.text_to_speech.convert(
             voice_id=ELEVENLABS_VOICE_ID,
             text=text,
-            model_id="eleven_multilingual_v2",
+            model_id="eleven_flash_v2_5",  # Schnellstes Modell
+            optimize_streaming_latency=4,  # Max Latenz-Optimierung
         )
         filename = f"{uuid.uuid4().hex}.mp3"
         filepath = os.path.join(AUDIO_DIR, filename)
@@ -152,7 +146,7 @@ def respond():
     try:
         claude_response = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=200,
+            max_tokens=100,  # Kurze Antworten = schneller
             system=LUNA_SYSTEM,
             messages=conversation_history
         )
