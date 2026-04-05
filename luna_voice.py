@@ -34,6 +34,22 @@ conversation_history = []
 def home():
     return "Luna Voice System - Online", 200
 
+def make_gather(action="/respond"):
+    """Erstelle Gather mit optimalen Einstellungen"""
+    return Gather(
+        input="speech",
+        action=action,
+        method="POST",
+        language="de-DE",
+        speech_timeout=2,
+        timeout=10,
+        action_on_empty_result=True
+    )
+
+def say(gather, text):
+    """Spreche Text mit besserer Stimme"""
+    gather.say(text, language="de-DE", voice="Polly.Vicki")
+
 @app.route("/incoming-call", methods=["POST"])
 def incoming_call():
     """Eingehender Anruf — begrüße und starte Konversation"""
@@ -43,18 +59,20 @@ def incoming_call():
     logger.info(f"Eingehender Anruf von {request.form.get('From')}")
     
     response = VoiceResponse()
-    gather = Gather(
-        input="speech",
-        action="/respond",
-        method="POST",
-        language="de-DE",
-        speech_timeout="auto",
-        timeout=5
-    )
-    gather.say("Hallo Chris, hier ist Luna. Wie kann ich dir helfen?", language="de-DE")
+    gather = make_gather()
+    say(gather, "Hallo Chris, hier ist Luna. Wie kann ich dir helfen?")
     response.append(gather)
-    response.redirect("/incoming-call")
+    response.redirect("/listen")
     
+    return str(response), 200
+
+@app.route("/listen", methods=["POST"])
+def listen():
+    """Warte auf Sprache ohne Greeting"""
+    response = VoiceResponse()
+    gather = make_gather()
+    response.append(gather)
+    response.redirect("/listen")
     return str(response), 200
 
 @app.route("/respond", methods=["POST"])
@@ -62,21 +80,22 @@ def respond():
     """Was Chris gesagt hat → Claude → Antwort aussprechen → weiter"""
     global conversation_history
     
-    speech_result = request.form.get("SpeechResult", "")
-    logger.info(f"Chris sagt: {speech_result}")
+    speech_result = request.form.get("SpeechResult", "").strip()
+    logger.info(f"Chris sagt: '{speech_result}'")
     
     if not speech_result:
+        # Nichts gehört — weiter zuhören
         response = VoiceResponse()
-        gather = Gather(
-            input="speech",
-            action="/respond",
-            method="POST",
-            language="de-DE",
-            speech_timeout="auto",
-            timeout=5
-        )
-        gather.say("Ich habe dich nicht verstanden. Kannst du das wiederholen?", language="de-DE")
+        gather = make_gather()
         response.append(gather)
+        response.redirect("/listen")
+        return str(response), 200
+    
+    # Gesprächs-Ende erkennen
+    if any(word in speech_result.lower() for word in ["tschüss", "auf wiedersehen", "bye", "ciao"]):
+        response = VoiceResponse()
+        response.say("Tschüss Chris! Bis bald.", language="de-DE", voice="Polly.Vicki")
+        response.hangup()
         return str(response), 200
     
     # Konversationsverlauf aufbauen
@@ -96,7 +115,6 @@ def respond():
         luna_reply = claude_response.content[0].text
         logger.info(f"Luna antwortet: {luna_reply}")
         
-        # Antwort zur History hinzufügen
         conversation_history.append({
             "role": "assistant",
             "content": luna_reply
@@ -104,21 +122,14 @@ def respond():
         
     except Exception as e:
         logger.error(f"Claude Fehler: {e}")
-        luna_reply = "Entschuldigung, ich hatte gerade einen technischen Fehler. Kannst du das wiederholen?"
+        luna_reply = "Entschuldigung, kurzer technischer Fehler. Was hast du gesagt?"
     
     # Antwort aussprechen und weiter zuhören
     response = VoiceResponse()
-    gather = Gather(
-        input="speech",
-        action="/respond",
-        method="POST",
-        language="de-DE",
-        speech_timeout="auto",
-        timeout=8
-    )
-    gather.say(luna_reply, language="de-DE")
+    gather = make_gather()
+    say(gather, luna_reply)
     response.append(gather)
-    response.redirect("/incoming-call")
+    response.redirect("/listen")
     
     return str(response), 200
 
