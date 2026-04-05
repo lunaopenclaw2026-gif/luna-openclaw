@@ -45,7 +45,10 @@ def make_gather(action="/respond"):
         language="de-DE",
         speech_timeout=2,
         timeout=10,
-        action_on_empty_result=True
+        action_on_empty_result=True,
+        speech_model="phone_call",  # Optimiert für Telefon
+        enhanced=True,              # Google Enhanced STT
+        hints="Baumann, Christopher, Luna, Restaurant, Reservierung, Termin, Email, Gmail, gmx, at, Punkt, Komma, eins, zwei, drei, vier, fünf, sechs, sieben, acht, neun, null"
     )
 
 def generate_audio(text):
