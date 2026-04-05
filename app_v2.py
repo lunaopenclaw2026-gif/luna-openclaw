@@ -204,6 +204,7 @@ def test_call():
             "message": str(e)
         }), 500
 
+@app.route("/incoming-call", methods=["POST"])
 @app.route("/incoming", methods=["POST"])
 def incoming_call():
     """
